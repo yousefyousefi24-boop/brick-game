@@ -1,27 +1,19 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Load sounds
-const hitSound = new Audio("hit.wav");
-const loseSound = new Audio("lose.wav");
-
-// Ball
+const ballRadius = 10;
 let x = canvas.width / 2;
 let y = canvas.height - 30;
 let dx = 2;
 let dy = -2;
-const ballRadius = 10;
 
-// Paddle
 const paddleHeight = 10;
 const paddleWidth = 75;
 let paddleX = (canvas.width - paddleWidth) / 2;
 
-// Controls
 let rightPressed = false;
 let leftPressed = false;
 
-// Bricks
 const brickRowCount = 3;
 const brickColumnCount = 5;
 const brickWidth = 75;
@@ -38,9 +30,14 @@ for (let c = 0; c < brickColumnCount; c++) {
   }
 }
 
-// Event listeners
+let score = 0;
+const hitSound = new Audio("hit.wav");
+const loseSound = new Audio("lose.wav");
+
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
+canvas.addEventListener("touchstart", handleTouch, false);
+canvas.addEventListener("touchmove", handleTouch, false);
 
 function keyDownHandler(e) {
   if (e.key === "Right" || e.key === "ArrowRight") {
@@ -55,6 +52,39 @@ function keyUpHandler(e) {
     rightPressed = false;
   } else if (e.key === "Left" || e.key === "ArrowLeft") {
     leftPressed = false;
+  }
+}
+
+function handleTouch(e) {
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const touchX = touch.clientX - rect.left;
+  paddleX = touchX - paddleWidth / 2;
+  e.preventDefault();
+}
+
+function collisionDetection() {
+  for (let c = 0; c < brickColumnCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      const b = bricks[c][r];
+      if (b.status === 1) {
+        if (
+          x > b.x &&
+          x < b.x + brickWidth &&
+          y > b.y &&
+          y < b.y + brickHeight
+        ) {
+          dy = -dy;
+          b.status = 0;
+          hitSound.play();
+          score++;
+          if (score === brickRowCount * brickColumnCount) {
+            alert("You Win!");
+            document.location.reload();
+          }
+        }
+      }
+    }
   }
 }
 
@@ -92,25 +122,10 @@ function drawBricks() {
   }
 }
 
-function collisionDetection() {
-  for (let c = 0; c < brickColumnCount; c++) {
-    for (let r = 0; r < brickRowCount; r++) {
-      const b = bricks[c][r];
-      if (b.status === 1) {
-        if (
-          x > b.x &&
-          x < b.x + brickWidth &&
-          y > b.y &&
-          y < b.y + brickHeight
-        ) {
-          dy = -dy;
-          b.status = 0;
-          hitSound.currentTime = 0;
-          hitSound.play();
-        }
-      }
-    }
-  }
+function drawScore() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#000";
+  ctx.fillText("Score: " + score, 8, 20);
 }
 
 function draw() {
@@ -118,6 +133,7 @@ function draw() {
   drawBricks();
   drawBall();
   drawPaddle();
+  drawScore();
   collisionDetection();
 
   if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
@@ -128,16 +144,10 @@ function draw() {
   } else if (y + dy > canvas.height - ballRadius) {
     if (x > paddleX && x < paddleX + paddleWidth) {
       dy = -dy;
-      hitSound.currentTime = 0;
-      hitSound.play();
     } else {
-      loseSound.currentTime = 0;
       loseSound.play();
-      setTimeout(() => {
-        alert("Game Over!");
-        document.location.reload();
-      }, 1000);
-      return;
+      alert("Game Over");
+      document.location.reload();
     }
   }
 
